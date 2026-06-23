@@ -1,5 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -14,7 +16,7 @@ export default function Activate() {
   const [locked, setLocked] = useState(false)
 
   const handleActivate = async () => {
-    if (locked) return
+    if (locked || loading) return
     setLoading(true)
     setError('')
     try {
@@ -32,9 +34,6 @@ export default function Activate() {
           setError('// the webmaster has been notified of repeated invalid access attempts')
         } else {
           setError(data.message || '// code not recognized')
-          if (newAttempts > 2) {
-            setTimeout(() => setError(''), 30000)
-          }
         }
       } else {
         if (data.satelliteRedirect) {
@@ -58,9 +57,7 @@ export default function Activate() {
           // BOOK {bookNum} ACCESS CODE
         </div>
         <div className="text-xs mb-8" style={{ color: '#0F6E56' }}>
-          {bookNum === 1
-            ? '// enter the 16-character code from inside the front cover of your physical book'
-            : `// enter the book ${bookNum} access code — requires ${bookNum === 2 ? '9' : '21'} verified keys`}
+          // enter the 16-character code from inside the front cover of your physical book
         </div>
         <input
           type="text"
@@ -82,18 +79,16 @@ export default function Activate() {
           onClick={handleActivate}
           disabled={loading || locked || code.length < 16}
           className="w-full py-3 text-sm tracking-widest border transition-all"
-          style={{ borderColor: '#BA7517', color: '#BA7517', background: 'transparent',
-            opacity: code.length < 16 ? 0.4 : 1 }}>
-          {loading ? '// validating...' : '// TRANSMIT ↗'}
+          style={{
+            borderColor: '#BA7517', color: '#BA7517', background: 'transparent',
+            opacity: code.length < 16 ? 0.4 : 1
+          }}>
+          {loading ? '// validating...' : '// TRANSMIT \u2197'}
         </button>
         <div className="mt-8 text-xs text-center" style={{ color: '#0F6E56' }}>
-          <a href="https://lawlipodcast.com/books" style={{ color: '#BA7517' }}>
-            lawlipodcast.com/books
-          </a>
-          {' · '}
-          <a href="https://lpmucc.com" style={{ color: '#BA7517' }}>
-            lpmucc.com
-          </a>
+          <a href="https://lawlipodcast.com/books" style={{ color: '#BA7517' }}>lawlipodcast.com/books</a>
+          {' \u00b7 '}
+          <a href="https://lpmucc.com" style={{ color: '#BA7517' }}>lpmucc.com</a>
         </div>
       </div>
     </div>
