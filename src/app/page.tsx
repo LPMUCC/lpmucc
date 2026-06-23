@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
@@ -9,7 +9,7 @@ const LINES = [
   { text: '// SESSION INITIALIZED', color: '#9FE1CB' },
   { text: '// NODE: lpmucc.com', color: '#9FE1CB' },
   { text: '// CLEARANCE: INSUFFICIENT', color: '#E24B4A' },
-  { text: '', color: '' },
+  { text: '', color: 'transparent' },
   { text: 'The board was set before you arrived.', color: '#FFFFFF' },
   { text: 'The rules were written before you were born.', color: '#FFFFFF' },
   { text: 'The banker does not land on squares that cost them.', color: '#FFFFFF' },
@@ -24,27 +24,33 @@ const RESPONSES = [
   '// the board was never yours. yet.',
 ]
 
+const mono = 'Courier New, monospace'
+
 export default function Home() {
   const router = useRouter()
+  const supabaseRef = useRef(createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  ))
+  const supabase = supabaseRef.current
+
   const [visibleLines, setVisibleLines] = useState<number[]>([])
   const [showCounters, setShowCounters] = useState(false)
   const [showInput, setShowInput] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [response, setResponse] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [authMode, setAuthMode] = useState<'login'|'register'>('register')
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('register')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [authError, setAuthError] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [datetime, setDatetime] = useState('')
-  const [stats, setStats] = useState({ keys: 0, days: 1, structures: 0, hunters: 0 })
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const [keys, setKeys] = useState(0)
+  const [days, setDays] = useState(1)
+  const [structures, setStructures] = useState(0)
+  const [hunters, setHunters] = useState(0)
 
   useEffect(() => {
     const t = setInterval(() => setDatetime(new Date().toUTCString()), 1000)
@@ -61,20 +67,21 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const { data } = await supabase.from('platform_stats').select('*')
-      if (data) {
-        const m: Record<string,number> = {}
-        data.forEach((r: any) => { m[r.stat_key] = r.stat_value })
-        setStats({ keys: m.keys_found_globally||0, days: m.days_since_launch||1, structures: m.structures_submitted_current_year||0, hunters: m.hunters_active||0 })
-      }
-    }
-    fetchStats()
+    supabase.from('platform_stats').select('*').then(({ data }) => {
+      if (!data) return
+      data.forEach((r: any) => {
+        if (r.stat_key === 'keys_found_globally') setKeys(r.stat_value)
+        if (r.stat_key === 'days_since_launch') setDays(r.stat_value)
+        if (r.stat_key === 'structures_submitted_current_year') setStructures(r.stat_value)
+        if (r.stat_key === 'hunters_active') setHunters(r.stat_value)
+      })
+    })
   }, [])
 
-  const handleInput = useCallback((e: React.KeyboardEvent) => {
+  const handleInput = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return
-    if (inputValue.trim().toUpperCase() === 'ENTER') {
+    const val = (e.target as HTMLInputElement).value.trim().toUpperCase()
+    if (val === 'ENTER') {
       setAuthMode('register')
       setShowModal(true)
       setInputValue('')
@@ -83,14 +90,19 @@ export default function Home() {
       setInputValue('')
       setTimeout(() => setResponse(''), 3000)
     }
-  }, [inputValue])
+  }, [])
 
   const handleAuth = async () => {
+    if (!email || !password) return
     setAuthLoading(true)
     setAuthError('')
     try {
       if (authMode === 'register') {
-        const { error } = await supabase.auth.signUp({ email, password, options: { data: { username } } })
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { username } }
+        })
         if (error) throw error
         router.push('/activate')
       } else {
@@ -99,99 +111,161 @@ export default function Home() {
         router.push('/dashboard')
       }
     } catch (e: any) {
-      setAuthError(e.message)
+      setAuthError(e.message || 'authentication failed')
     } finally {
       setAuthLoading(false)
     }
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '1px solid #0F6E56',
+    outline: 'none',
+    color: '#9FE1CB',
+    fontFamily: mono,
+    fontSize: '13px',
+    padding: '8px 0',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  }
+
   return (
-    <div style={{ minHeight:'100vh', background:'#04342C', display:'flex', flexDirection:'column', fontFamily:'Courier New, monospace' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', padding:'16px 32px', borderBottom:'1px solid #0F6E56' }}>
-        <span style={{ color:'#0F6E56', fontSize:'12px', letterSpacing:'0.1em' }}>LPMUCC // VAULT TERMINAL</span>
-        <span style={{ color:'#0F6E56', fontSize:'12px' }}>{datetime}</span>
+    <div style={{ minHeight: '100vh', background: '#04342C', display: 'flex', flexDirection: 'column', fontFamily: mono }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid #0F6E56' }}>
+        <span style={{ color: '#0F6E56', fontSize: '12px', letterSpacing: '0.1em' }}>LPMUCC // VAULT TERMINAL</span>
+        <span style={{ color: '#0F6E56', fontSize: '12px' }}>{datetime}</span>
       </div>
 
-      <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'32px', maxWidth:'640px', margin:'0 auto', width:'100%' }}>
-        <div style={{ width:'100%', marginBottom:'48px' }}>
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', maxWidth: '640px', margin: '0 auto', width: '100%' }}>
+
+        {/* Terminal lines */}
+        <div style={{ width: '100%', marginBottom: '48px' }}>
           {LINES.map((line, i) => (
-            <div key={i} style={{ color: line.color || 'transparent', fontSize:'14px', lineHeight:'1.8', minHeight:'1.6rem', opacity: visibleLines.includes(i) ? 1 : 0, transition:'opacity 0.3s' }}>
+            <div key={i} style={{ color: line.color, fontSize: '14px', lineHeight: '1.8', minHeight: '1.6rem', opacity: visibleLines.includes(i) ? 1 : 0, transition: 'opacity 0.3s' }}>
               {line.text}
             </div>
           ))}
         </div>
 
+        {/* Counters */}
         {showCounters && (
-          <div style={{ width:'100%', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px', marginBottom:'32px' }}>
+          <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
             {[
-              { val: stats.keys, label: '[KEYS FOUND]' },
-              { val: stats.days, label: '[DAYS ACTIVE]' },
-              { val: stats.structures, label: '[STRUCTURES SUBMITTED]' },
-              { val: stats.hunters, label: '[HUNTERS ACTIVE]' },
+              { val: keys, label: '[KEYS FOUND]' },
+              { val: days, label: '[DAYS ACTIVE]' },
+              { val: structures, label: '[STRUCTURES SUBMITTED]' },
+              { val: hunters, label: '[HUNTERS ACTIVE]' },
             ].map(({ val, label }) => (
-              <div key={label} style={{ borderTop:'1px solid #0F6E56', paddingTop:'16px' }}>
-                <div style={{ color:'#BA7517', fontSize:'28px', fontWeight:'bold', marginBottom:'4px' }}>
-                  {String(val).padStart(4,'0')}
+              <div key={label} style={{ borderTop: '1px solid #0F6E56', paddingTop: '16px' }}>
+                <div style={{ color: '#BA7517', fontSize: '28px', fontWeight: 'bold', marginBottom: '4px' }}>
+                  {String(val).padStart(4, '0')}
                 </div>
-                <div style={{ color:'#0F6E56', fontSize:'10px', letterSpacing:'0.15em', opacity:0.4 }}>{label}</div>
+                <div style={{ color: '#0F6E56', fontSize: '10px', letterSpacing: '0.15em', opacity: 0.3 }}>{label}</div>
               </div>
             ))}
           </div>
         )}
 
+        {/* Hidden input */}
         {showInput && (
-          <div style={{ width:'100%' }}>
+          <div style={{ width: '100%' }}>
             <input
               type="text"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               onKeyDown={handleInput}
-              style={{ width:'100%', background:'transparent', border:'1px solid rgba(15,110,86,0.08)', outline:'none', color:'#9FE1CB', fontFamily:'Courier New, monospace', fontSize:'13px', padding:'4px 8px', opacity:0.15, boxSizing:'border-box' }}
+              style={{ width: '100%', background: 'transparent', border: '1px solid rgba(15,110,86,0.08)', outline: 'none', color: '#9FE1CB', fontFamily: mono, fontSize: '13px', padding: '4px 8px', opacity: 0.12, boxSizing: 'border-box' }}
               autoComplete="off"
               spellCheck={false}
+              aria-label="terminal"
             />
-            {response && <div style={{ marginTop:'8px', fontSize:'12px', color:'#0F6E56' }}>{response}</div>}
+            {response !== '' && (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#0F6E56' }}>{response}</div>
+            )}
           </div>
         )}
       </div>
 
-      <div style={{ display:'flex', justifyContent:'space-between', padding:'16px 32px', borderTop:'1px solid #0F6E56', fontSize:'11px', color:'#0F6E56', fontFamily:'Courier New, monospace' }}>
+      {/* Footer */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 32px', borderTop: '1px solid #0F6E56', fontSize: '11px', color: '#0F6E56' }}>
         <span>K. LAWLI · LAWLI PUBLISHING · 2026</span>
         <span>
-          <a href="https://lpmucc.com" style={{ color:'#BA7517', textDecoration:'none' }}>lpmucc.com</a>
+          <a href="https://lpmucc.com" style={{ color: '#BA7517', textDecoration: 'none' }}>lpmucc.com</a>
           {' · '}
-          <a href="https://lawlipodcast.com/books" style={{ color:'#BA7517', textDecoration:'none' }}>lawlipodcast.com/books</a>
+          <a href="https://lawlipodcast.com/books" style={{ color: '#BA7517', textDecoration: 'none' }}>lawlipodcast.com/books</a>
         </span>
       </div>
 
+      {/* Auth Modal */}
       {showModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50 }}
-          onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div style={{ background:'#04342C', border:'1px solid #1D9E75', padding:'32px', width:'100%', maxWidth:'400px', fontFamily:'Courier New, monospace' }}>
-            <div style={{ fontSize:'11px', letterSpacing:'0.1em', color:'#0F6E56', marginBottom:'24px' }}>
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}
+        >
+          <div style={{ background: '#04342C', border: '1px solid #1D9E75', padding: '40px', width: '100%', maxWidth: '420px', fontFamily: mono }}>
+
+            <div style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#0F6E56', marginBottom: '28px' }}>
               {authMode === 'register' ? '// CREATE ACCESS POINT' : '// RETURNING OPERATOR'}
             </div>
+
             {authMode === 'register' && (
-              <input type="text" placeholder="username" value={username} onChange={e => setUsername(e.target.value)}
-                style={{ width:'100%', background:'transparent', borderBottom:'1px solid #0F6E56', outline:'none', color:'#9FE1CB', fontFamily:'Courier New, monospace', fontSize:'13px', padding:'8px 0', marginBottom:'16px', boxSizing:'border-box' }} />
+              <input
+                type="text"
+                placeholder="username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                style={inputStyle}
+                autoComplete="off"
+              />
             )}
-            <input type="email" placeholder="email" value={email} onChange={e => setEmail(e.target.value)}
-              style={{ width:'100%', background:'transparent', borderBottom:'1px solid #0F6E56', outline:'none', color:'#9FE1CB', fontFamily:'Courier New, monospace', fontSize:'13px', padding:'8px 0', marginBottom:'16px', boxSizing:'border-box' }} />
-            <input type="password" placeholder="password" value={password} onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAuth()}
-              style={{ width:'100%', background:'transparent', borderBottom:'1px solid #0F6E56', outline:'none', color:'#9FE1CB', fontFamily:'Courier New, monospace', fontSize:'13px', padding:'8px 0', marginBottom:'24px', boxSizing:'border-box' }} />
-            {authError && <div style={{ color:'#E24B4A', fontSize:'11px', marginBottom:'16px' }}>{authError}</div>}
-            <button onClick={handleAuth} disabled={authLoading}
-              style={{ width:'100%', background:'transparent', border:'1px solid #BA7517', color:'#BA7517', fontFamily:'Courier New, monospace', fontSize:'13px', padding:'10px', cursor:'pointer', letterSpacing:'0.1em' }}>
+
+            <input
+              type="email"
+              placeholder="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              style={inputStyle}
+              autoComplete="email"
+            />
+
+            <input
+              type="password"
+              placeholder="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAuth() }}
+              style={{ ...inputStyle, marginBottom: '28px' }}
+              autoComplete="new-password"
+            />
+
+            {authError !== '' && (
+              <div style={{ color: '#E24B4A', fontSize: '11px', marginBottom: '16px' }}>{authError}</div>
+            )}
+
+            <button
+              onClick={handleAuth}
+              disabled={authLoading}
+              style={{ width: '100%', background: 'transparent', border: '1px solid #BA7517', color: '#BA7517', fontFamily: mono, fontSize: '13px', padding: '12px', cursor: 'pointer', letterSpacing: '0.1em', marginBottom: '12px' }}
+            >
               {authLoading ? '// TRANSMITTING...' : authMode === 'register' ? '// ESTABLISH ACCESS POINT' : '// AUTHENTICATE'}
             </button>
-            <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-              style={{ width:'100%', background:'transparent', border:'none', color:'#0F6E56', fontFamily:'Courier New, monospace', fontSize:'11px', padding:'12px', cursor:'pointer' }}>
+
+            <button
+              onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+              style={{ width: '100%', background: 'transparent', border: 'none', color: '#0F6E56', fontFamily: mono, fontSize: '11px', padding: '8px', cursor: 'pointer' }}
+            >
               {authMode === 'login' ? 'create access point →' : 'returning operator →'}
             </button>
+
           </div>
         </div>
       )}
+
     </div>
   )
 }
