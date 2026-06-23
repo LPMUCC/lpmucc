@@ -1,12 +1,8 @@
-import { Metadata } from 'next'
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-}
+export const dynamic = 'force-dynamic'
 export default function Vault33() {
   return (
-    <div className="min-h-screen flex items-center justify-center"
-      style={{ background: '#000000' }}>
-      <span className="font-mono text-2xl animate-blink" style={{ color: '#BA7517' }}>█</span>
+    <div style={{ background:'#000000', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <span style={{ color:'#BA7517', fontSize:'24px' }}>█</span>
     </div>
   )
 }

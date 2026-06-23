@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export default function Activate() {
   const router = useRouter()
@@ -27,68 +27,36 @@ export default function Activate() {
       })
       const data = await res.json()
       if (!res.ok) {
-        const newAttempts = attempts + 1
-        setAttempts(newAttempts)
-        if (newAttempts >= 5) {
-          setLocked(true)
-          setError('// the webmaster has been notified of repeated invalid access attempts')
-        } else {
-          setError(data.message || '// code not recognized')
-        }
+        const n = attempts + 1
+        setAttempts(n)
+        if (n >= 5) { setLocked(true); setError('// the webmaster has been notified') }
+        else setError(data.message || '// code not recognized')
       } else {
-        if (data.satelliteRedirect) {
-          router.push(data.satelliteSlug)
-        } else {
-          router.push('/dashboard')
-        }
+        router.push(data.satelliteRedirect ? data.satelliteSlug : '/dashboard')
       }
-    } catch {
-      setError('// transmission error')
-    } finally {
-      setLoading(false)
-    }
+    } catch { setError('// transmission error') }
+    finally { setLoading(false) }
   }
 
+  const s = { fontFamily: 'Courier New, monospace', background: '#04342C', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-8"
-      style={{ background: '#04342C' }}>
-      <div className="w-full max-w-md font-mono">
-        <div className="text-xs tracking-widest mb-2" style={{ color: '#0F6E56' }}>
-          // BOOK {bookNum} ACCESS CODE
-        </div>
-        <div className="text-xs mb-8" style={{ color: '#0F6E56' }}>
-          // enter the 16-character code from inside the front cover of your physical book
-        </div>
-        <input
-          type="text"
-          value={code}
-          onChange={e => setCode(e.target.value.toUpperCase())}
-          onKeyDown={e => e.key === 'Enter' && handleActivate()}
-          maxLength={16}
-          placeholder="________________"
-          disabled={locked}
-          className="w-full bg-transparent border-b outline-none py-3 text-center text-xl tracking-widest mb-6"
-          style={{ borderColor: '#1D9E75', color: '#9FE1CB', letterSpacing: '0.4em' }}
-          autoComplete="off"
-          spellCheck={false}
-        />
-        {error && (
-          <div className="mb-4 text-xs" style={{ color: '#E24B4A' }}>{error}</div>
-        )}
-        <button
-          onClick={handleActivate}
-          disabled={loading || locked || code.length < 16}
-          className="w-full py-3 text-sm tracking-widest border transition-all"
-          style={{
-            borderColor: '#BA7517', color: '#BA7517', background: 'transparent',
-            opacity: code.length < 16 ? 0.4 : 1
-          }}>
-          {loading ? '// validating...' : '// TRANSMIT \u2197'}
+    <div style={s}>
+      <div style={{ width: '100%', maxWidth: '400px', padding: '32px' }}>
+        <div style={{ color: '#0F6E56', fontSize: '11px', letterSpacing: '0.1em', marginBottom: '8px' }}>// BOOK {bookNum} ACCESS CODE</div>
+        <div style={{ color: '#0F6E56', fontSize: '11px', marginBottom: '32px' }}>// enter the 16-character code from your physical book</div>
+        <input type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase())}
+          onKeyDown={e => e.key === 'Enter' && handleActivate()} maxLength={16}
+          placeholder="________________" disabled={locked}
+          style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid #1D9E75', outline: 'none', color: '#9FE1CB', fontFamily: 'Courier New, monospace', fontSize: '20px', padding: '12px 0', textAlign: 'center', letterSpacing: '0.4em', marginBottom: '24px', boxSizing: 'border-box' }} />
+        {error && <div style={{ color: '#E24B4A', fontSize: '11px', marginBottom: '16px' }}>{error}</div>}
+        <button onClick={handleActivate} disabled={loading || locked || code.length < 16}
+          style={{ width: '100%', background: 'transparent', border: '1px solid #BA7517', color: '#BA7517', fontFamily: 'Courier New, monospace', fontSize: '13px', padding: '12px', cursor: code.length < 16 ? 'not-allowed' : 'pointer', opacity: code.length < 16 ? 0.4 : 1, letterSpacing: '0.1em' }}>
+          {loading ? '// validating...' : '// TRANSMIT'}
         </button>
-        <div className="mt-8 text-xs text-center" style={{ color: '#0F6E56' }}>
-          <a href="https://lawlipodcast.com/books" style={{ color: '#BA7517' }}>lawlipodcast.com/books</a>
-          {' \u00b7 '}
-          <a href="https://lpmucc.com" style={{ color: '#BA7517' }}>lpmucc.com</a>
+        <div style={{ textAlign: 'center', marginTop: '32px', fontSize: '11px' }}>
+          <a href="https://lawlipodcast.com/books" style={{ color: '#BA7517', textDecoration: 'none' }}>lawlipodcast.com/books</a>
+          {' · '}
+          <a href="https://lpmucc.com" style={{ color: '#BA7517', textDecoration: 'none' }}>lpmucc.com</a>
         </div>
       </div>
     </div>

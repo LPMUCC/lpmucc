@@ -1,44 +1,40 @@
 'use client'
 export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
 export default function Registry() {
   const [entries, setEntries] = useState<any[]>([])
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+
   useEffect(() => {
-    supabase.from('registry').select('*')
-      .eq('approved', true).order('completion_year', { ascending: false })
-      .then(({ data }) => { if (data) setEntries(data) })
+    supabase.from('registry').select('*').eq('approved', true).order('completion_year', { ascending: false }).then(({ data }) => { if (data) setEntries(data) })
   }, [])
+
   return (
-    <div className="min-h-screen" style={{ background: '#04342C' }}>
-      <div className="max-w-2xl mx-auto px-8 py-16 font-mono">
-        <div className="text-xs tracking-widest mb-2" style={{ color: '#BA7517' }}>
-          // PRIVATE BANKER REGISTRY
-        </div>
-        <div className="text-xs mb-8" style={{ color: '#0F6E56' }}>
-          // VERIFIED COMPLETE STRUCTURES
-        </div>
-        <div className="border-t mb-8" style={{ borderColor: '#0F6E56' }} />
+    <div style={{ background:'#04342C', minHeight:'100vh', fontFamily:'Courier New, monospace' }}>
+      <div style={{ maxWidth:'640px', margin:'0 auto', padding:'64px 32px' }}>
+        <div style={{ color:'#BA7517', fontSize:'11px', letterSpacing:'0.15em', marginBottom:'8px' }}>// PRIVATE BANKER REGISTRY</div>
+        <div style={{ color:'#0F6E56', fontSize:'11px', marginBottom:'32px' }}>// VERIFIED COMPLETE STRUCTURES</div>
+        <div style={{ borderTop:'1px solid #0F6E56', marginBottom:'32px' }} />
         {entries.length === 0 ? (
-          <div className="space-y-2 text-xs" style={{ color: '#0F6E56' }}>
+          <div style={{ color:'#0F6E56', fontSize:'11px', lineHeight:'2' }}>
             <div>// NO ENTRIES ON RECORD</div>
             <div>// THE VAULT HAS NOT YET BEEN CLAIMED</div>
             <div>// ANNUAL HUNT: OPENS JANUARY 1 · CLOSES DECEMBER 31</div>
-            <div className="mt-4">
-              <a href="https://lawlipodcast.com/books" style={{ color: '#BA7517' }}>lawlipodcast.com/books</a>
+            <div style={{ marginTop:'16px' }}>
+              <a href="https://lawlipodcast.com/books" style={{ color:'#BA7517', textDecoration:'none' }}>lawlipodcast.com/books</a>
               {' · '}
-              <a href="https://lpmucc.com" style={{ color: '#BA7517' }}>lpmucc.com</a>
+              <a href="https://lpmucc.com" style={{ color:'#BA7517', textDecoration:'none' }}>lpmucc.com</a>
             </div>
           </div>
-        ) : (
-          entries.map(e => (
-            <div key={e.id} className="mb-6 pb-6 border-b text-xs"
-              style={{ borderColor: '#0F6E56' }}>
-              <div style={{ color: '#9FE1CB' }}>{e.public_name} · {e.completion_year} · {e.prize_tier}</div>
-              <div className="mt-1" style={{ color: '#0F6E56' }}>"{e.public_statement}"</div>
-            </div>
-          ))
-        )}
+        ) : entries.map(e => (
+          <div key={e.id} style={{ marginBottom:'24px', paddingBottom:'24px', borderBottom:'1px solid #0F6E56' }}>
+            <div style={{ color:'#9FE1CB', fontSize:'12px' }}>{e.public_name} · {e.completion_year} · {e.prize_tier}</div>
+            <div style={{ color:'#0F6E56', fontSize:'11px', marginTop:'4px' }}>"{e.public_statement}"</div>
+          </div>
+        ))}
       </div>
     </div>
   )
