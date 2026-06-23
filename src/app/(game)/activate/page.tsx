@@ -2,8 +2,9 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, Suspense } from 'react'
+import { supabase } from '@/lib/supabase-client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+
 
 function ActivateForm() {
   const router = useRouter()

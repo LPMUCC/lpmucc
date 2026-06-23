@@ -2,8 +2,9 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+
 
 const VAULT_KEYS: Record<number,string> = {
   1:'ENTER',2:'BANKER',3:'CONVERT',4:'SMART',5:'SHIELD',6:'LEDGER',7:'QUESTION',8:'NOTICE',9:'LEGACY',
@@ -19,7 +20,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [accountAgeDays, setAccountAgeDays] = useState(0)
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  
 
   useEffect(() => {
     const load = async () => {

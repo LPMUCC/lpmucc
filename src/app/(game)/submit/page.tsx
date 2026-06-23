@@ -2,8 +2,9 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
+import { supabase } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+
 
 export default function Submit() {
   const router = useRouter()
@@ -15,7 +16,7 @@ export default function Submit() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  
 
   const handleSubmit = async () => {
     if (!keyNumber || !keyWord || !chapter || !file) { setError('// all fields required'); return }
