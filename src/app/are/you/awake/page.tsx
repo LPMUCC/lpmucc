@@ -1,7 +1,7 @@
 'use client'
-export const dynamic = 'force-dynamic'
-'use client'
 import { useState, useEffect } from 'react'
+
+export const dynamic = 'force-dynamic'
 export default function AreYouAwake() {
   const [visible, setVisible] = useState(false)
   const [input, setInput] = useState('')
