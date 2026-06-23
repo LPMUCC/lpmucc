@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --vault-green: #04342C;
+  --vault-gold: #BA7517;
+  --vault-teal: #1D9E75;
+  --vault-teal-dim: #0F6E56;
+  --vault-text: #9FE1CB;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--vault-green);
+  color: var(--vault-text);
+  font-family: 'Courier New', Courier, monospace;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+::selection { background: var(--vault-gold); color: #000; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #021f1a; }
+::-webkit-scrollbar-thumb { background: var(--vault-teal-dim); }
+
+.terminal-cursor::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  color: var(--vault-teal);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.glitch-hover:hover {
+  animation: glitch 0.2s ease-in-out;
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, 2px); }
+  80% { transform: translate(1px, -2px); filter: hue-rotate(0deg); }
+  100% { transform: translate(0); }
+}
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px var(--vault-green) inset !important;
+  -webkit-text-fill-color: var(--vault-text) !important;
+}
