@@ -2,14 +2,16 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
-
+import { supabase } from '@/lib/supabase-client'
 
 export default function Registry() {
   const [entries, setEntries] = useState<any[]>([])
-  
 
   useEffect(() => {
-    supabase.from('registry').select('*').eq('approved', true).order('completion_year', { ascending: false }).then(({ data }) => { if (data) setEntries(data) })
+    supabase.from('registry').select('*')
+      .eq('approved', true)
+      .order('completion_year', { ascending: false })
+      .then(({ data }) => { if (data) setEntries(data) })
   }, [])
 
   return (
