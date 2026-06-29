@@ -33,13 +33,6 @@ export default function Home() {
   const [showInput, setShowInput] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [response, setResponse] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('register')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [username, setUsername] = useState('')
-  const [authError, setAuthError] = useState('')
-  const [authLoading, setAuthLoading] = useState(false)
   const [datetime, setDatetime] = useState('')
   const [keys, setKeys] = useState(0)
   const [days, setDays] = useState(1)
@@ -60,8 +53,12 @@ export default function Home() {
     setTimeout(() => setShowInput(true), 8000)
   }, [])
 
-  // Fetch stats ONCE only - no polling interval
   useEffect(() => {
+    // Check session - redirect to dashboard if already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.push('/dashboard')
+    })
+    // Fetch stats once
     supabase.from('platform_stats').select('*').then(({ data }) => {
       if (!data) return
       data.forEach((r: any) => {
@@ -71,60 +68,20 @@ export default function Home() {
         if (r.stat_key === 'hunters_active') setHunters(r.stat_value)
       })
     })
-  }, [])
-
-  // Check if user already logged in - redirect to dashboard
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.push('/dashboard')
-    })
   }, [router])
 
   const handleInput = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return
     const val = inputValue.trim().toUpperCase()
     if (val === 'ENTER') {
-      setAuthMode('register')
-      setShowModal(true)
+      router.push('/login?mode=register')
       setInputValue('')
     } else {
       setResponse(RESPONSES[Math.floor(Math.random() * RESPONSES.length)])
       setInputValue('')
       setTimeout(() => setResponse(''), 3000)
     }
-  }, [inputValue])
-
-  const handleAuth = async () => {
-    if (!email || !password) return
-    setAuthLoading(true)
-    setAuthError('')
-    try {
-      if (authMode === 'register') {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { username } }
-        })
-        if (error) throw error
-        router.push('/activate')
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-        router.push('/dashboard')
-      }
-    } catch (e: any) {
-      setAuthError(e.message || 'authentication failed')
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
-  const inp: React.CSSProperties = {
-    width: '100%', background: 'transparent', border: 'none',
-    borderBottom: '1px solid #0F6E56', outline: 'none', color: '#9FE1CB',
-    fontFamily: mono, fontSize: '13px', padding: '8px 0',
-    marginBottom: '16px', boxSizing: 'border-box',
-  }
+  }, [inputValue, router])
 
   return (
     <div style={{ minHeight: '100vh', background: '#04342C', display: 'flex', flexDirection: 'column', fontFamily: mono }}>
@@ -140,7 +97,7 @@ export default function Home() {
               {i === 7 ? (
                 <>
                   {line.text.slice(0, -1)}
-                  <span onClick={() => { setAuthMode('login'); setShowModal(true) }} style={{ cursor: 'default' }}>.</span>
+                  <span onClick={() => router.push('/login')} style={{ cursor: 'default' }}>.</span>
                 </>
               ) : line.text}
             </div>
@@ -165,7 +122,8 @@ export default function Home() {
 
         {showInput && (
           <div style={{ width: '100%' }}>
-            <input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}
+            <input type="text" value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
               onKeyDown={handleInput}
               style={{ width: '100%', background: 'transparent', border: '1px solid rgba(15,110,86,0.08)', outline: 'none', color: '#9FE1CB', fontFamily: mono, fontSize: '13px', padding: '4px 8px', opacity: 0.12, boxSizing: 'border-box' }}
               autoComplete="off" spellCheck={false} aria-label="terminal" />
@@ -182,33 +140,6 @@ export default function Home() {
           <a href="https://lawlipodcast.com/books" style={{ color: '#BA7517', textDecoration: 'none' }}>lawlipodcast.com/books</a>
         </span>
       </div>
-
-      {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div style={{ background: '#04342C', border: '1px solid #1D9E75', padding: '40px', width: '100%', maxWidth: '420px', fontFamily: mono }}>
-            <div style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#0F6E56', marginBottom: '28px' }}>
-              {authMode === 'register' ? '// CREATE ACCESS POINT' : '// RETURNING OPERATOR'}
-            </div>
-            {authMode === 'register' && (
-              <input type="text" placeholder="username" value={username} onChange={e => setUsername(e.target.value)} style={inp} autoComplete="off" />
-            )}
-            <input type="email" placeholder="email" value={email} onChange={e => setEmail(e.target.value)} style={inp} autoComplete="email" />
-            <input type="password" placeholder="password" value={password} onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleAuth() }}
-              style={{ ...inp, marginBottom: '28px' }} autoComplete="current-password" />
-            {authError && <div style={{ color: '#E24B4A', fontSize: '11px', marginBottom: '16px' }}>{authError}</div>}
-            <button onClick={handleAuth} disabled={authLoading}
-              style={{ width: '100%', background: 'transparent', border: '1px solid #BA7517', color: '#BA7517', fontFamily: mono, fontSize: '13px', padding: '12px', cursor: 'pointer', letterSpacing: '0.1em', marginBottom: '12px' }}>
-              {authLoading ? '// TRANSMITTING...' : authMode === 'register' ? '// ESTABLISH ACCESS POINT' : '// AUTHENTICATE'}
-            </button>
-            <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-              style={{ width: '100%', background: 'transparent', border: 'none', color: '#0F6E56', fontFamily: mono, fontSize: '11px', padding: '8px', cursor: 'pointer' }}>
-              {authMode === 'login' ? 'create access point →' : 'returning operator →'}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

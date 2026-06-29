@@ -1,20 +1,18 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { supabaseAdmin } from '@/lib/supabase'
+import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase-server'
 import { VAULT_KEYS } from '@/lib/constants'
 
 export async function POST(req: Request) {
   const { keyNumber, keyWord, chapter, artifactPath } = await req.json()
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = createSupabaseServerClient()
+  const supabaseAdmin = createSupabaseAdminClient()
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ message: '// authentication required' }, { status: 401 })
 
   const correctWord = VAULT_KEYS[keyNumber as keyof typeof VAULT_KEYS]
   if (!correctWord || keyWord !== correctWord) {
-    return NextResponse.json({
-      message: '// transmission not recognized. the word is in the chapter. the chapter is the map.'
-    }, { status: 400 })
+    return NextResponse.json({ message: '// transmission not recognized. the word is in the chapter.' }, { status: 400 })
   }
 
   const { data: profile } = await supabaseAdmin
@@ -27,12 +25,9 @@ export async function POST(req: Request) {
     .from('vault-artifacts').createSignedUrl(artifactPath, 60 * 60 * 24 * 30)
 
   await supabaseAdmin.from('vault_submissions').insert({
-    user_id: user.id,
-    key_number: keyNumber,
-    key_word: keyWord,
+    user_id: user.id, key_number: keyNumber, key_word: keyWord,
     proof_artifact_url: urlData?.signedUrl || artifactPath,
-    submitted_at: new Date().toISOString(),
-    review_status: 'pending',
+    submitted_at: new Date().toISOString(), review_status: 'pending',
   })
 
   const submittedAt = profile?.keys_submitted_at || {}

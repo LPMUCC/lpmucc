@@ -13,7 +13,7 @@ const VAULT_KEYS: Record<number,string> = {
 }
 
 const TIER_COLORS: Record<string,string> = {
-  piece: '#9FE1CB', player: '#1D9E75', builder: '#EF9F27', banker: '#7F77DD', dynasty_founder: '#BA7517'
+  piece:'#9FE1CB', player:'#1D9E75', builder:'#EF9F27', banker:'#7F77DD', dynasty_founder:'#BA7517'
 }
 
 export default function Dashboard() {
@@ -25,12 +25,8 @@ export default function Dashboard() {
   const [accountAgeDays, setAccountAgeDays] = useState(0)
 
   useEffect(() => {
-    const load = async () => {
-      // Wait for session to be ready
-      await new Promise(r => setTimeout(r, 500))
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/'); return }
-
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { router.push('/login'); return }
       const { data: prof } = await supabase.from('users').select('*').eq('id', session.user.id).single()
       if (prof) {
         setProfile(prof)
@@ -41,12 +37,11 @@ export default function Dashboard() {
         .eq('user_id', session.user.id).order('submitted_at', { ascending: false })
       if (subs) setSubmissions(subs)
       setLoading(false)
-    }
-    load()
+    })
   }, [router])
 
   if (loading) return (
-    <div style={{ background: '#04342C', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Courier New, monospace', color: '#0F6E56', fontSize: '12px' }}>
+    <div style={{ background:'#04342C', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Courier New, monospace', color:'#0F6E56', fontSize:'12px' }}>
       // loading vault
     </div>
   )
@@ -59,7 +54,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div style={{ background: '#04342C', minHeight: '100vh', fontFamily: 'Courier New, monospace' }}>
+    <div style={{ background:'#04342C', minHeight:'100vh', fontFamily:'Courier New, monospace' }}>
       <div style={{ display:'flex', justifyContent:'space-between', padding:'16px 32px', borderBottom:'1px solid #0F6E56' }}>
         <span style={{ color:'#0F6E56', fontSize:'12px' }}>LPMUCC // VAULT TERMINAL</span>
         <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))}
@@ -67,43 +62,33 @@ export default function Dashboard() {
           // sign out
         </button>
       </div>
-
       <div style={{ maxWidth:'720px', margin:'0 auto', padding:'48px 32px' }}>
         <div style={{ color:'#0F6E56', fontSize:'11px', marginBottom:'32px', lineHeight:'2' }}>
-          <div>
-            // <span style={{ color:'#9FE1CB' }}>{profile?.username || 'operator'}</span>
-            {'  ·  '}
-            <span style={{ color: TIER_COLORS[tier] || '#9FE1CB', fontWeight:'bold' }}>
-              {tier.replace('_',' ').toUpperCase()}
-            </span>
-            {'  ·  '}DAY {accountAgeDays}
-          </div>
-          <div>KEYS: {keysVerified.length}/33{'  ·  '}BOOKS: {[profile?.book_1_activated_at, profile?.book_2_activated_at, profile?.book_3_activated_at].filter(Boolean).length}/3</div>
+          <div>// <span style={{ color:'#9FE1CB' }}>{profile?.username || 'operator'}</span>
+            {'  ·  '}<span style={{ color:TIER_COLORS[tier]||'#9FE1CB', fontWeight:'bold' }}>{tier.replace('_',' ').toUpperCase()}</span>
+            {'  ·  '}DAY {accountAgeDays}</div>
+          <div>KEYS: {keysVerified.length}/33{'  ·  '}BOOKS: {[profile?.book_1_activated_at,profile?.book_2_activated_at,profile?.book_3_activated_at].filter(Boolean).length}/3</div>
         </div>
 
         {groups.map(g => (
           <div key={g.book} style={{ marginBottom:'32px' }}>
             <div style={{ color:g.acc, fontSize:'10px', letterSpacing:'0.15em', opacity:0.6, marginBottom:'12px' }}>// {g.label}</div>
             {!g.unlocked ? (
-              <div style={{ border:`1px solid ${g.acc}22`, color:'#222', fontSize:'11px', padding:'16px', textAlign:'center' }}>
+              <div style={{ border:`1px solid ${g.acc}22`, color:'#1a1a1a', fontSize:'11px', padding:'16px', textAlign:'center' }}>
                 ████████ BOOK {g.book} NOT YET UNLOCKED ████████
               </div>
             ) : (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px' }}>
-                {Array.from({ length: g.end - g.start + 1 }, (_, i) => {
-                  const kn = g.start + i
+                {Array.from({ length: g.end-g.start+1 }, (_, i) => {
+                  const kn = g.start+i
                   const verified = keysVerified.includes(kn)
-                  const pending = submissions.find(s => s.key_number === kn && s.review_status === 'pending')
+                  const pending = submissions.find(s => s.key_number===kn && s.review_status==='pending')
                   return (
-                    <div key={kn} style={{ border:`1px solid ${verified ? g.acc : g.acc+'22'}`, background: verified ? g.acc+'11' : 'transparent', padding:'12px', fontSize:'11px' }}>
-                      <div style={{ color: verified ? g.acc : '#333', marginBottom:'4px' }}>{String(kn).padStart(2,'0')}</div>
-                      {verified ? (
-                        <><div style={{ color:'#FFF', fontWeight:'bold' }}>{VAULT_KEYS[kn]}</div><div style={{ color:'#0F6E56', fontSize:'10px' }}>✓ verified</div></>
-                      ) : pending ? (
-                        <div style={{ color:'#BA7517' }}>// pending</div>
-                      ) : (
-                        <div style={{ color:'#1a1a1a' }}>_ _ _ _ _</div>
-                      )}
+                    <div key={kn} style={{ border:`1px solid ${verified?g.acc:g.acc+'22'}`, background:verified?g.acc+'11':'transparent', padding:'12px', fontSize:'11px' }}>
+                      <div style={{ color:verified?g.acc:'#333', marginBottom:'4px' }}>{String(kn).padStart(2,'0')}</div>
+                      {verified ? (<><div style={{ color:'#FFF', fontWeight:'bold' }}>{VAULT_KEYS[kn]}</div><div style={{ color:'#0F6E56', fontSize:'10px' }}>✓ verified</div></>)
+                        : pending ? <div style={{ color:'#BA7517' }}>// pending</div>
+                        : <div style={{ color:'#1a1a1a' }}>_ _ _ _ _</div>}
                     </div>
                   )
                 })}
@@ -142,7 +127,7 @@ export default function Dashboard() {
             <div style={{ color:'#0F6E56', fontSize:'10px', letterSpacing:'0.15em', marginBottom:'16px' }}>// TRANSMISSION LOG</div>
             {submissions.slice(0,10).map(s => (
               <div key={s.id} style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', color:'#0F6E56', marginBottom:'8px' }}>
-                <span>KEY #{String(s.key_number).padStart(2,'0')} · <span style={{ color: s.review_status==='verified'?'#1D9E75':s.review_status==='rejected'?'#E24B4A':'#BA7517' }}>{s.review_status}</span></span>
+                <span>KEY #{String(s.key_number).padStart(2,'0')} · <span style={{ color:s.review_status==='verified'?'#1D9E75':s.review_status==='rejected'?'#E24B4A':'#BA7517' }}>{s.review_status}</span></span>
                 <span>{new Date(s.submitted_at).toLocaleDateString()}</span>
               </div>
             ))}
